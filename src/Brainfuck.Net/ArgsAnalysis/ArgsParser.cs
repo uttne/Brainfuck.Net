@@ -5,11 +5,11 @@ using System.Reflection;
 
 namespace Brainfuck.Net.ArgParsers
 {
-    public class ArgParser<T>
+    public class ArgsParser<T>
     {
         private PropertyInfo[] _propertyInfos;
 
-        public ArgParser()
+        public ArgsParser()
         {
             _propertyInfos = typeof(T).GetProperties();
 
