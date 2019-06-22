@@ -8,6 +8,7 @@ namespace Brainfuck.Net
     {
         static void Main(string[] args)
         {
+            
             //Todo Analyse args.
             
             var src = "+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-." +
