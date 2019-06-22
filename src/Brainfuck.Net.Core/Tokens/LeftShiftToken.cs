@@ -2,9 +2,9 @@ namespace Brainfuck.Net.Core.Tokens
 {
     public class LeftShiftToken : BrainfuckToken
     {
-        public override void Do()
+        public override void Operate(BrainfuckMemoryTape memoryTape, IBrainfuckStream stream)
         {
-            MemoryTape.LeftShift();
+            memoryTape.LeftShift();
         }
     }
 }

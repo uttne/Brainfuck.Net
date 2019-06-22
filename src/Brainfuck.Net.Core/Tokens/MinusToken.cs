@@ -2,9 +2,9 @@ namespace Brainfuck.Net.Core.Tokens
 {
     public class MinusToken : BrainfuckToken
     {
-        public override void Do()
+        public override void Operate(BrainfuckMemoryTape memoryTape, IBrainfuckStream stream)
         {
-            MemoryTape.Decrement();
+            memoryTape.Decrement();
         }
     }
 }

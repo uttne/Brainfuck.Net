@@ -2,24 +2,21 @@ namespace Brainfuck.Net.Core.Tokens
 {
     public class RightBracketToken : BrainfuckToken
     {
-        public override void Do()
+        public override void Operate(BrainfuckMemoryTape memoryTape, IBrainfuckStream stream)
         {
             
         }
         
         public LeftBracketToken LeftBracketToken { get; internal set; }
 
-        public override BrainfuckToken Next
+        public override BrainfuckToken GetNext(BrainfuckMemoryTape memoryTape)
         {
-            get
+            if (memoryTape.Current == 0)
             {
-                if (MemoryTape.Current == 0)
-                {
-                    return NextIndexToken;
-                }
-
-                return LeftBracketToken;
+                return NextIndexToken;
             }
+
+            return LeftBracketToken;
         }
     }
 }

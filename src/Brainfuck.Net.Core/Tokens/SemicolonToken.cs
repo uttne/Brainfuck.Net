@@ -4,10 +4,10 @@ namespace Brainfuck.Net.Core.Tokens
 {
     public class SemicolonToken : BrainfuckToken
     {
-        public override void Do()
+        public override void Operate(BrainfuckMemoryTape memoryTape, IBrainfuckStream stream)
         {
             var c = Console.Read();
-            MemoryTape.Current = (int) c;
+            memoryTape.Current = (int) c;
         }
     }
 }
