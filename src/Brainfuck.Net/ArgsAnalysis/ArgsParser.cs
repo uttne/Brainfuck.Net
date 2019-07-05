@@ -6,48 +6,51 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Brainfuck.Net.ArgParsers
+namespace Brainfuck.Net.ArgsAnalysis
 {
-    public class ArgsData<TOption>
+    public interface IArgsData<TOption>
     {
-        private readonly HashSet<PropertyInfo> _propertyInfoSet;
-
-        public ArgsData(TOption option,HashSet<PropertyInfo> propertyInfoSet)
-        {
-            if (option == null)
-                throw new ArgumentNullException(nameof(option));
-            
-            Option = option;
-            
-            _propertyInfoSet = propertyInfoSet;
-        }
-        
-        public TOption Option { get; }
-
-        public bool Has<T>(Expression<Func<TOption, T>> selectedProperty)
-        {
-            var selectedPropertyInfo = (selectedProperty.Body as MemberExpression)?.Member as PropertyInfo;
-            
-            if(selectedProperty == null)
-                throw new InvalidOperationException($"{(selectedProperty.Body as MemberExpression)?.Member.Name} is not property.");
-
-            if (_propertyInfoSet == null)
-                return false;
-            return _propertyInfoSet.Contains(selectedPropertyInfo);
-        }
+        TOption Option { get; }
+        bool Has<T>(Expression<Func<TOption, T>> selectedProperty);
     }
     
-    
-    public class ArgsParser<T>
-    where T : new()
+    public class ArgsParser<TOption>
+    where TOption : new()
     {
-        private Parameters[] _parameters;
-        private readonly Dictionary<string,Option> _optionDic = new Dictionary<string,Option>();
-        private readonly Dictionary<string,Option> _shortOptionDic = new Dictionary<string,Option>();
-
-        public class Option
+        #region Inner class
+        
+        private class ArgsData:IArgsData<TOption>
         {
-            public Option(PropertyInfo propertyInfo,string optionName,string shortOptionName,string description)
+            private readonly HashSet<PropertyInfo> _propertyInfoSet;
+
+            public ArgsData(TOption option,HashSet<PropertyInfo> propertyInfoSet)
+            {
+                if (option == null)
+                    throw new ArgumentNullException(nameof(option));
+            
+                Option = option;
+            
+                _propertyInfoSet = propertyInfoSet;
+            }
+        
+            public TOption Option { get; }
+
+            public bool Has<T>(Expression<Func<TOption, T>> selectedProperty)
+            {
+                var selectedPropertyInfo = (selectedProperty.Body as MemberExpression)?.Member as PropertyInfo;
+            
+                if(selectedProperty == null)
+                    throw new InvalidOperationException($"{(selectedProperty.Body as MemberExpression)?.Member.Name} is not property.");
+
+                if (_propertyInfoSet == null)
+                    return false;
+                return _propertyInfoSet.Contains(selectedPropertyInfo);
+            }
+        }
+        
+        private class Option
+        {
+            private Option(PropertyInfo propertyInfo,string optionName,string shortOptionName)
             {
                 if(propertyInfo == null)
                     throw new ArgumentNullException();
@@ -61,7 +64,6 @@ namespace Brainfuck.Net.ArgParsers
                     throw new ArgumentException();
                 
                 ShortOptionName = shortOptionName;
-                Description = description;
 
                 OptionHashKey = OptionName.ToLower();
                 ShortOptionHashKey = ShortOptionName;
@@ -88,23 +90,34 @@ namespace Brainfuck.Net.ArgParsers
                     match.Groups[5].Success ? match.Groups[5].Value : null;
                 
                 var description = optionAttribute.Description;
-                return new Option(propertyInfo,optionName,shortOptionName,description);
+                return new Option(propertyInfo,optionName,shortOptionName)
+                {
+                    Description = description,
+                    IsDefault = optionAttribute.IsDefault,
+                };
             }
             
             public PropertyInfo PropertyInfo { get; }
             public string OptionName { get; }
             public string ShortOptionName { get; }
-            public string Description { get; }
+            public string Description { get; private set; }
+            public bool IsDefault { get; private set; }
             
             public bool IsRequiredValue { get; }
 
-            public void Set(ref T target,string valueText)
+            public void Set(ref TOption target,string valueText)
             {
                 var propertyType = PropertyInfo.PropertyType;
 
-                var value = Convert(propertyType, valueText);
-                
-                PropertyInfo.SetValue(target, value);
+                try
+                {
+                    var value = Convert(propertyType, valueText);
+                    PropertyInfo.SetValue(target, value);
+                }
+                catch (ArgumentException ex)
+                {
+                    throw new AnalysisException(PropertyInfo, ex.Message, ex);
+                }
             }
 
             public static string ConvertOptionName(string propertyName)
@@ -125,8 +138,8 @@ namespace Brainfuck.Net.ArgParsers
 
                 return sb.ToString();
             }
-            
-            public static object Convert(Type type,string valueText)
+
+            private object Convert(Type type,string valueText)
             {
                 object value;
 
@@ -134,13 +147,13 @@ namespace Brainfuck.Net.ArgParsers
                     "Parse",
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
                     null,
-                    new Type[]{typeof(string)},
+                    new[]{typeof(string)},
                     null
                     );
                 
                 if(type == typeof(string))
                 {
-                    value = valueText;
+                    value = valueText ?? throw new ArgumentException($"Value is not found.");
                 }
                 else if (type == typeof(bool))
                 {
@@ -148,7 +161,18 @@ namespace Brainfuck.Net.ArgParsers
                 }
                 else if(type.IsEnum)
                 {
-                    value = Enum.Parse(type, valueText);
+                    try
+                    {
+                        value = Enum.Parse(type, valueText ?? throw new ArgumentException($"Value is not found."));
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        throw new ArgumentException($"'{valueText}' is not a suitable value.", ex);
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new ArgumentException($"'{valueText}' is outside the range.", ex);
+                    }
                 }
                 else if(parseMethodInfo != null)
                 {
@@ -173,7 +197,7 @@ namespace Brainfuck.Net.ArgParsers
             public string OptionHashKey { get; private set; }
         }
 
-        public class Parameters
+        private class Parameters
         {
             public static Parameters Create(PropertyInfo propertyInfo,ParametersAttribute parameters)
             {
@@ -181,9 +205,18 @@ namespace Brainfuck.Net.ArgParsers
             }
         }
         
+        #endregion
+        
+        
+        private Parameters[] _parameters;
+        private readonly Dictionary<string,Option> _optionDic = new Dictionary<string,Option>();
+        private readonly Dictionary<string,Option> _shortOptionDic = new Dictionary<string,Option>();
+        private readonly Option _defaultOption;
+
+
         public ArgsParser()
         {
-            var propertyInfos = typeof(T).GetProperties();
+            var propertyInfos = typeof(TOption).GetProperties();
 
             var options = propertyInfos
                 .Where(x=>x.CanWrite)
@@ -204,10 +237,12 @@ namespace Brainfuck.Net.ArgParsers
                     return new {option, parameters};
                 })
                 .ToArray();
-            
+
             // Eliminate duplicate options.
             foreach (var option in options.Where(x=>x.option != null).Select(x=>x.option))
             {
+                if (option.IsDefault)
+                    _defaultOption = _defaultOption == null ? option : throw new InvalidOperationException();
                 _optionDic.Add(option.OptionHashKey, option);
                 _shortOptionDic.Add(option.ShortOptionHashKey, option);
             }
@@ -215,7 +250,7 @@ namespace Brainfuck.Net.ArgParsers
             _parameters = options.Where(x => x.parameters != null).Select(x=>x.parameters).ToArray();
         }
 
-        public static bool TryOption(string arg,out string optionText)
+        private static bool IsOption(string arg,out string optionText)
         {
             optionText = null;
 
@@ -229,7 +264,7 @@ namespace Brainfuck.Net.ArgParsers
             return optionText != null;
         }
         
-        public static bool TryShortOption(string arg,out string[] optionTexts)
+        private static bool IsShortOption(string arg,out string[] optionTexts)
         {
             optionTexts = null;
 
@@ -243,10 +278,12 @@ namespace Brainfuck.Net.ArgParsers
             return optionTexts != null && optionTexts.Length != 0;
         }
         
-        public ArgsData<T> Parse(string[] args)
+        public IArgsData<TOption> Parse(string[] args)
         {
-            var ret = new T();
+            var ret = new TOption();
             var propertyInfoSet = new HashSet<PropertyInfo>();
+
+            var defaultOption = _defaultOption;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -260,47 +297,52 @@ namespace Brainfuck.Net.ArgParsers
                 
                 var s = args[i];
                 
-                if (TryOption(s, out var optionText))
+                if (IsOption(s, out var optionText))
                 {
                     if (_optionDic.TryGetValue(optionText, out var option) == false)
                     {
-                        throw new ArgumentException($"'{s}' is not found.");
+                        throw new ArgumentException($"Option '{s}' can not be specified.");
                     }
 
                     propertyInfoSet.Add(option.PropertyInfo);
 
-                    if(option.IsRequiredValue)
-                        continue;
-                    
                     var valueText = GetValueText();
                     option.Set(ref ret,valueText);
                     
-                    i++;
+                    if(option.IsRequiredValue == false)
+                        i++;
                 }
-                else if (TryShortOption(s, out var optionTexts))
+                else if (IsShortOption(s, out var optionTexts))
                 {
                     foreach (var text in optionTexts)
                     {
                         if (_shortOptionDic.TryGetValue(text, out var option) == false)
                         {
-                            throw new ArgumentException($"'{text}' is not found.");
+                            throw new ArgumentException($"Option '{text}' can not be specified.");
                         }
 
                         propertyInfoSet.Add(option.PropertyInfo);
                         
-                        if(option.IsRequiredValue)
-                            continue;
-                    
                         var valueText = GetValueText();
                         option.Set(ref ret,valueText);
                     
-                        i++;
+                        if(option.IsRequiredValue == false)
+                            i++;
                     }
+                }
+                else
+                {
+                    if (defaultOption == null) 
+                        continue;
+                    
+                    defaultOption.Set(ref ret,s);
+
+                    defaultOption = null;
                 }
             }
 
             
-            return new ArgsData<T>(ret,propertyInfoSet); ;
+            return new ArgsData(ret,propertyInfoSet); ;
         }
 
         public string GetHelpText(object option)
@@ -309,16 +351,20 @@ namespace Brainfuck.Net.ArgParsers
         }
     }
 
+    #region Attribute
+    
     [AttributeUsage(AttributeTargets.Property)]
     public class OptionAttribute : Attribute
     {
         public string Option { get; }
         public string Description { get; }
+        public bool IsDefault { get; }
 
-        public OptionAttribute(string option,string description)
+        public OptionAttribute(string option,string description,bool isDefault = false)
         {
             Option = option;
             Description = description;
+            IsDefault = isDefault;
         }
     }
 
@@ -334,15 +380,27 @@ namespace Brainfuck.Net.ArgParsers
         
     }
 
-    public class Options
+    #endregion
+
+    #region Exception
+
+    public class AnalysisException:Exception
     {
-        [Parameters]
-        public IList<string> Parameters { get; set; }
+        public AnalysisException(PropertyInfo analysisErrorPropertyInfo,string message,Exception innerException):base(message,innerException)
+        {
+            AnalysisErrorPropertyInfo = analysisErrorPropertyInfo;
+        }
+        public AnalysisException(PropertyInfo analysisErrorPropertyInfo,string message):base(message)
+        {
+            AnalysisErrorPropertyInfo = analysisErrorPropertyInfo;
+        }
+        public AnalysisException(PropertyInfo analysisErrorPropertyInfo)
+        {
+            AnalysisErrorPropertyInfo = analysisErrorPropertyInfo;
+        }
         
-        [Option("h|help","show help")]
-        public bool Help { get; set; }
-        
-        [Option("s|source","")]
-        public string Source { get; set; }
+        public PropertyInfo AnalysisErrorPropertyInfo { get; }
     }
+
+    #endregion
 }
