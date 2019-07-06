@@ -254,7 +254,7 @@ namespace Brainfuck.Net.ArgsAnalysis
         {
             optionText = null;
 
-            var regex = new Regex("--(.*)", RegexOptions.Compiled);
+            var regex = new Regex("^--(.*)$", RegexOptions.Compiled);
 
             var match = regex.Match(arg);
 
@@ -268,7 +268,7 @@ namespace Brainfuck.Net.ArgsAnalysis
         {
             optionTexts = null;
 
-            var regex = new Regex("-(.*)", RegexOptions.Compiled);
+            var regex = new Regex("^-(.*)$", RegexOptions.Compiled);
 
             var match = regex.Match(arg);
 
