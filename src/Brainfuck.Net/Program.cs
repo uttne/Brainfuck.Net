@@ -17,10 +17,13 @@ namespace Brainfuck.Net
             {
                 var tokens = parser.Parse(sr);
 
-                foreach (var token in tokens)
-                {
-                    token.Do();
-                }
+                var memoryTape = new BrainfuckMemoryTape();
+
+                var stream = new BrainfuckStream();
+                
+                var steps = BrainfuckSteps.Create(tokens, memoryTape, stream);
+                
+                steps.Run();
             }
             
         }

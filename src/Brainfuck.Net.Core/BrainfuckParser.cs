@@ -7,13 +7,11 @@ namespace Brainfuck.Net.Core
 {
     public class BrainfuckParser
     {
-        public BrainfuckTokenSequence Parse(TextReader streamReader, BrainfuckMemoryTape memoryTape = null)
+        public IEnumerable<BrainfuckToken> Parse(TextReader streamReader)
         {
-            memoryTape = memoryTape ?? new BrainfuckMemoryTape(); 
-            
+            var ret = new List<BrainfuckToken>();
             var leftBracketStack = new Stack<LeftBracketToken>();
             
-            BrainfuckToken first = null;
             BrainfuckToken prev = null;
             var index = -1;
                 
@@ -68,26 +66,18 @@ namespace Brainfuck.Net.Core
                         current = rightBracket;
                     }
                         break;
-                    default:
-                        break;
                 }
 
                 if(current == null)
                     continue;
 
-                current.MemoryTape = memoryTape;
                 current.Index = index;
-                
-                if (prev != null && prev.Next == null)
-                {
-                    prev.SetNextIndexToken(current);
-                }
-                
+
+                prev?.SetNextIndexToken(current);
+
                 prev = current;
                 
-                if(first != null)
-                    continue;
-                first = current;
+                ret.Add(current);
             }
             
             if (leftBracketStack.Count != 0)
@@ -95,7 +85,7 @@ namespace Brainfuck.Net.Core
                 throw new InvalidOperationException();
             }
 
-            return new BrainfuckTokenSequence(first);
+            return ret;
         } 
     }
 
