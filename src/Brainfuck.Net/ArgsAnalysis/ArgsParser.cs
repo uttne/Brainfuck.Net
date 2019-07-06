@@ -336,6 +336,7 @@ namespace Brainfuck.Net.ArgsAnalysis
                         continue;
                     
                     defaultOption.Set(ref ret,s);
+                    propertyInfoSet.Add(defaultOption.PropertyInfo);
 
                     defaultOption = null;
                 }
