@@ -3,6 +3,9 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp2.2</TargetFramework>
         <RootNamespace>Brainfuck.Net.Core</RootNamespace>
+        <PackageVersion>0.1.0</PackageVersion>
+        <Title>Brainfuck.Net.Core</Title>
+        <Authors>uttne</Authors>
     </PropertyGroup>
 
 </Project>

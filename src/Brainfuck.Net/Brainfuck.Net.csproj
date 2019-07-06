@@ -8,6 +8,15 @@
         <ToolCommandName>brainfuck.net</ToolCommandName>
         <PackageOutputPath>./nupkg</PackageOutputPath>
         <RootNamespace>Brainfuck.Net</RootNamespace>
+        <PackageVersion>0.1.0</PackageVersion>
+        <Title>Brainfuck.Net</Title>
+        <Authors>uttne</Authors>
+        <Description>Brainfuck global tools for .Net Core.</Description>
+        <Copyright>Copyright (c) 2019 uttne</Copyright>
+        <PackageProjectUrl>https://github.com/uttne/Brainfuck.Net</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/uttne/Brainfuck.Net/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/uttne/Brainfuck.Net.git</RepositoryUrl>
+        <RepositoryType>Git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
