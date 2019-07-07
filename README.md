@@ -13,4 +13,4 @@ $ brainfuck.net --code "+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++.
 ```
 
 ## nuget
-(Brainfuck.Net)[https://www.nuget.org/packages/Brainfuck.Net/]
+[Brainfuck.Net](https://www.nuget.org/packages/Brainfuck.Net/)
