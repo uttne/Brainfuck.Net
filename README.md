@@ -11,3 +11,6 @@ $ dotnet tool install --global Brainfuck.Net
 ```
 $ brainfuck.net --code "+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-.------------.<++++++++.--------.+++.------.--------.>+.#"
 ```
+
+## nuget
+(Brainfuck.Net)[https://www.nuget.org/packages/Brainfuck.Net/]
